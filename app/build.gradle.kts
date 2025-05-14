@@ -37,12 +37,13 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
+    implementation(libs.litert)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 
     // https://mvnrepository.com/artifact/org.tensorflow/tensorflow-lite
-    runtimeOnly("org.tensorflow:tensorflow-lite:2.17.0")
+    runtimeOnly("org.tensorflow:tensorflow-lite:2.16.1")
     // https://mvnrepository.com/artifact/org.tensorflow/tensorflow-lite-support
     runtimeOnly("org.tensorflow:tensorflow-lite-support:0.5.0")
     // https://mvnrepository.com/artifact/org.tensorflow/tensorflow-lite-task-vision
