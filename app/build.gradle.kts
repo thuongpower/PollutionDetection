@@ -37,27 +37,35 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
-    implementation(libs.litert)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 
     // https://mvnrepository.com/artifact/org.tensorflow/tensorflow-lite
-    runtimeOnly("org.tensorflow:tensorflow-lite:2.16.1")
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
     // https://mvnrepository.com/artifact/org.tensorflow/tensorflow-lite-support
-    runtimeOnly("org.tensorflow:tensorflow-lite-support:0.5.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.5.0")
     // https://mvnrepository.com/artifact/org.tensorflow/tensorflow-lite-task-vision
-    runtimeOnly("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
 
 
     // https://mvnrepository.com/artifact/io.github.lucksiege/camerax
-    implementation("io.github.lucksiege:camerax:v3.11.3")
+    implementation("io.github.lucksiege:camerax:v3.11.3"){
+        exclude(group = "com.google.ai.edge.litert", module = "litert-api")
+    }
     // https://mvnrepository.com/artifact/androidx.camera/camera-core
     implementation("androidx.camera:camera-core:1.4.2")
     // https://mvnrepository.com/artifact/androidx.camera/camera-lifecycle
-    runtimeOnly("androidx.camera:camera-lifecycle:1.4.2")
+    implementation("androidx.camera:camera-lifecycle:1.4.2")
     // https://mvnrepository.com/artifact/androidx.camera/camera-extensions
-    runtimeOnly("androidx.camera:camera-extensions:1.4.2")
+    implementation("androidx.camera:camera-extensions:1.4.2")
     // https://mvnrepository.com/artifact/androidx.camera/camera-camera2
-    runtimeOnly("androidx.camera:camera-camera2:1.4.2")
+    implementation("androidx.camera:camera-camera2:1.4.2")
+
+    configurations.all {
+        exclude(group= "com.google.ai.edge.litert", module= "litert-api")
+        exclude (group= "com.google.ai.edge.litert", module= "litert-support-api")
+    }
+
 }

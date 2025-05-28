@@ -1,30 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
-    <!-- PreviewView hiển thị camera -->
+    <!-- Camera preview -->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="3"/>
 
-    <!-- Button chọn ảnh từ thư viện -->
-    <Button
-        android:id="@+id/btnSelectImage"
+    <!-- Nút chụp ảnh và chọn ảnh/video -->
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Chọn ảnh"/>
+        android:layout_height="wrap_content">
 
-    <!-- TextView hiển thị kết quả phân loại -->
+        <Button
+            android:id="@+id/btnCapture"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Chụp ảnh"/>
+
+        <Button
+            android:id="@+id/btnSelect"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Chọn ảnh/video"/>
+    </LinearLayout>
+
+    <!-- ImageView để hiển thị kết quả (dự phòng) -->
+    <ImageView
+        android:id="@+id/imageResult"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scaleType="fitCenter"/>
+
+    <!-- TextView hiển thị nhãn (dự phòng) -->
     <TextView
-        android:id="@+id/textViewResult"
-        android:layout_width="match_parent"
+        android:id="@+id/textLabel"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Kết quả: "
-        android:padding="16dp"/>
+        android:text="Nhãn"/>
 </LinearLayout>
