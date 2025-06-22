@@ -11,7 +11,7 @@ import android.widget.ImageView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.pollutiondetection.R;
-import com.example.pollutiondetection.TensorFlowActivity;
+import com.example.pollutiondetection.TorchScriptActivity;
 
 import java.io.IOException;
 
@@ -40,9 +40,9 @@ public class ImageActivity extends AppCompatActivity {
             }
         }
 
-        // Khi nhấn nút "Nhận diện", mở TensorFlowActivity
+        // Khi nhấn nút "Nhận diện", mở TorchScriptActivity
         btnDetect.setOnClickListener(v -> {
-            Intent intent = new Intent(ImageActivity.this, TensorFlowActivity.class);
+            Intent intent = new Intent(ImageActivity.this, TorchScriptActivity.class);
             intent.putExtra("imageUri", imageUriString);
             startActivity(intent);
         });

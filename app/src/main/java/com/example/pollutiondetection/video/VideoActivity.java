@@ -8,7 +8,7 @@ import android.widget.VideoView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.pollutiondetection.R;
-import com.example.pollutiondetection.TensorFlowActivity;
+import com.example.pollutiondetection.TorchScriptActivity;
 
 public class VideoActivity extends AppCompatActivity {
     private VideoView videoView;
@@ -31,7 +31,7 @@ public class VideoActivity extends AppCompatActivity {
         }
 
         btnDetect.setOnClickListener(v -> {
-            Intent intent = new Intent(VideoActivity.this, TensorFlowActivity.class);
+            Intent intent = new Intent(VideoActivity.this, TorchScriptActivity.class);
             intent.putExtra("videoUri", videoUriString);
             startActivity(intent);
         });

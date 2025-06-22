@@ -52,8 +52,6 @@ public class MainActivity extends AppCompatActivity {
         previewView = findViewById(R.id.previewView);
         btnCapture = findViewById(R.id.btnCapture);
         btnSelect = findViewById(R.id.btnSelect);
-        imageResult = findViewById(R.id.imageResult);
-        textLabel = findViewById(R.id.textLabel);
 
         // Kiểm tra quyền máy ảnh
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)

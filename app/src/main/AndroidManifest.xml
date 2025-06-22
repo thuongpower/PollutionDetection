@@ -33,7 +33,7 @@
         </activity>
         <activity android:name=".image.ImageActivity"></activity>
         <activity android:name=".video.VideoActivity"></activity>
-        <activity android:name=".TensorFlowActivity"></activity>
+        <activity android:name=".TorchScriptActivity"></activity>
     </application>
 
 </manifest>

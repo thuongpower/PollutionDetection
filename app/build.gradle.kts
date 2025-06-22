@@ -25,9 +25,15 @@ android {
             )
         }
     }
+    aaptOptions{
+        noCompress += "pt"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    buildFeatures {
+        mlModelBinding = true
     }
 }
 
@@ -67,5 +73,10 @@ dependencies {
         exclude(group= "com.google.ai.edge.litert", module= "litert-api")
         exclude (group= "com.google.ai.edge.litert", module= "litert-support-api")
     }
+
+    // https://mvnrepository.com/artifact/org.pytorch/pytorch_android
+    implementation("org.pytorch:pytorch_android:2.1.0")
+    // https://mvnrepository.com/artifact/org.pytorch/pytorch_android_torchvision
+    implementation("org.pytorch:pytorch_android_torchvision:2.1.0")
 
 }
