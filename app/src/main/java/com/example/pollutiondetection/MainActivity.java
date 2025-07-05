@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -52,8 +53,6 @@ public class MainActivity extends AppCompatActivity {
         previewView = findViewById(R.id.previewView);
         btnCapture = findViewById(R.id.btnCapture);
         btnSelect = findViewById(R.id.btnSelect);
-        imageResult = findViewById(R.id.imageResult);
-        textLabel = findViewById(R.id.textLabel);
 
         // Kiểm tra quyền máy ảnh
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -91,59 +90,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
-    // Khởi động camera với CameraX
-    private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
-                ProcessCameraProvider.getInstance(this);
-        cameraProviderFuture.addListener(() -> {
-            try {
-                cameraProvider = cameraProviderFuture.get();
-                bindPreviewAndImageCapture();
-            } catch (ExecutionException | InterruptedException e) {
-                // Lỗi
-            }
-        }, ContextCompat.getMainExecutor(this));
-    }
-
-    // Thiết lập Preview và ImageCapture
-    private void bindPreviewAndImageCapture() {
-        Preview preview = new Preview.Builder().build();
-        preview.setSurfaceProvider(previewView.getSurfaceProvider());
-
-        imageCapture = new ImageCapture.Builder().build();
-
-        CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
-        cameraProvider.unbindAll();
-        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
-    }
-
-    // Chụp ảnh và lưu vào file, sau đó chuyển sang ImageActivity
-    private void takePhoto() {
-        if (imageCapture == null) return;
-        File photoFile = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
-                "temp.jpg");
-        ImageCapture.OutputFileOptions outputOptions =
-                new ImageCapture.OutputFileOptions.Builder(photoFile).build();
-
-        imageCapture.takePicture(outputOptions,
-                ContextCompat.getMainExecutor(this),
-                new ImageCapture.OnImageSavedCallback() {
-                    @Override
-                    public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-                        Uri savedUri = Uri.fromFile(photoFile);
-                        Intent intent = new Intent(MainActivity.this, ImageActivity.class);
-                        intent.putExtra("imageUri", savedUri.toString());
-                        startActivity(intent);
-                    }
-
-                    @Override
-                    public void onError(@NonNull ImageCaptureException exception) {
-                        Log.e("CameraX", "Lỗi chụp ảnh: " + exception.getMessage());
-                    }
-                });
-    }
-
     // Mở thư viện ảnh
     private void pickImage() {
         Intent intent = new Intent(Intent.ACTION_PICK,
@@ -157,36 +103,86 @@ public class MainActivity extends AppCompatActivity {
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, PICK_VIDEO);
     }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK && data != null) {
             Uri selectedUri = data.getData();
             if (selectedUri == null) return;
+            // Kiểm tra requestCode để xác định ảnh hay video
             if (requestCode == PICK_IMAGE) {
                 Intent intent = new Intent(MainActivity.this, ImageActivity.class);
                 intent.putExtra("imageUri", selectedUri.toString());
+                Log.e("MainActivity", "Selected Image URI: " + selectedUri.toString());
+                Log.e("MainActivity", "Selected Image Path: " + selectedUri.getPath());
                 startActivity(intent);
             } else if (requestCode == PICK_VIDEO) {
                 Intent intent = new Intent(MainActivity.this, VideoActivity.class);
                 intent.putExtra("videoUri", selectedUri.toString());
+                Log.e("MainActivity", "Selected Video URI: " + selectedUri.toString());
+                Log.e("MainActivity", "Selected Video Path: " + selectedUri.getPath());
                 startActivity(intent);
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    // Kết quả yêu cầu quyền
+    // Thiết lập Preview và ImageCapture
+    private void bindPreviewAndImageCapture() {
+        Preview preview = new Preview.Builder().build();
+        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+
+        imageCapture = new ImageCapture.Builder().build();
+
+        CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+        cameraProvider.unbindAll();
+        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
+    }
+    // Khởi động camera với CameraX
+    private void startCamera() {
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
+                ProcessCameraProvider.getInstance(this);
+        cameraProviderFuture.addListener(() -> {
+            try {
+                cameraProvider = cameraProviderFuture.get();
+                bindPreviewAndImageCapture();
+            } catch (ExecutionException | InterruptedException e) {
+                Log.e("CameraX", "Lỗi khởi động camera: " + e.getMessage());
+                Toast.makeText(MainActivity.this, "Không thể khởi động camera", Toast.LENGTH_SHORT).show();
+            }
+        }, ContextCompat.getMainExecutor(this));
+    }
+    private void takePhoto() { // Chụp ảnh và lưu vào file, sau đó chuyển sang ImageActivity
+        if (imageCapture == null) return;
+        File photoFile = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                "temp.jpg");
+        ImageCapture.OutputFileOptions outputOptions =
+                new ImageCapture.OutputFileOptions.Builder(photoFile).build();
+        imageCapture.takePicture(outputOptions,
+                ContextCompat.getMainExecutor(this),
+                new ImageCapture.OnImageSavedCallback() {
+                    @Override
+                    public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                        Uri savedUri = Uri.fromFile(photoFile);
+                        Intent intent = new Intent(MainActivity.this, ImageActivity.class);
+                        intent.putExtra("imageUri", savedUri.toString());
+                        startActivity(intent);
+                    }
+                    @Override
+                    public void onError(@NonNull ImageCaptureException exception) {
+                        Log.e("CameraX", "Lỗi chụp ảnh: " + exception.getMessage());
+                    }
+                });
+    }
+
+    // Kết quả yêu cầu quyền camera
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startCamera();
             } else {
-                finish(); // Không cấp quyền thì thoát
+                finish();
             }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);

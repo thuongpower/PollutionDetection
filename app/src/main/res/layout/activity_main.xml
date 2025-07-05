@@ -33,18 +33,9 @@
             android:text="Chọn ảnh/video"/>
     </LinearLayout>
 
-    <!-- ImageView để hiển thị kết quả (dự phòng) -->
-    <ImageView
-        android:id="@+id/imageResult"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:scaleType="fitCenter"/>
-
-    <!-- TextView hiển thị nhãn (dự phòng) -->
     <TextView
-        android:id="@+id/textLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Nhãn"/>
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
 </LinearLayout>

@@ -22,7 +22,7 @@ public class Utils {
         for (DetectionResult det : detections) {
             boolean keep = true;
             for (DetectionResult sel : outputList) {
-                if (iou(det.getBoundingBox(), sel.getBoundingBox()) > iouThreshold) {
+                if (IoU(det.getBoundingBox(), sel.getBoundingBox()) > iouThreshold) {
                     keep = false;
                     break;
                 }
@@ -34,8 +34,7 @@ public class Utils {
         return outputList;
     }
 
-    // Tính IOU của hai RectF (hình chữ nhật)
-    public static float iou(RectF a, RectF b) {
+    public static float IoU(RectF a, RectF b) {
         float interLeft = Math.max(a.left, b.left);
         float interTop = Math.max(a.top, b.top);
         float interRight = Math.min(a.right, b.right);
@@ -51,4 +50,3 @@ public class Utils {
         return interArea / unionArea;
     }
 }
-

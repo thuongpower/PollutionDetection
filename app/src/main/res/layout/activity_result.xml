@@ -6,17 +6,48 @@
     android:layout_height="match_parent">
 
     <!-- Ảnh kết quả có vẽ khung -->
-    <ImageView
+    <androidx.camera.view.PreviewView
         android:id="@+id/resultImage"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:scaleType="fitCenter"/>
+    <Button
+        android:id="@+id/btnDetect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nhận diện"/>
 
     <!-- Nhãn đối tượng phát hiện -->
     <TextView
         android:id="@+id/resultLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Kết quả"
+        android:textAlignment="center"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/textAlgae"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Kết quả"/>
+        android:text="Sóng: 0"
+        android:textSize="16sp"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/textTrash"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Rác: 0"
+        android:textSize="16sp"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/textOil"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Vàng dầu: 0"
+        android:textSize="16sp"
+        android:layout_marginTop="16dp"
+        android:textStyle="bold"/>
+
 </LinearLayout>

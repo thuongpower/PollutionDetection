@@ -28,24 +28,27 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 public class TensorFlowActivity extends AppCompatActivity {
-    private ImageView resultImage;
-    private TextView resultLabel;
-    private Interpreter interpreter;
-    private List<String> labels;
+
+    private ImageView resultImage; // ImageView hiển thị kết quả
+    private TextView resultLabel;  // TextView hiển thị nhãn phát hiện
+    private Interpreter interpreter; // Đối tượng TFLite Interpreter
+    private List<String> labels; // Danh sách nhãn
+    public static Bitmap sharedBitmap = null; // Bitmap được truyền trực tiếp từ nơi khác (nếu có)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_result);
+
         resultImage = findViewById(R.id.resultImage);
         resultLabel = findViewById(R.id.resultLabel);
 
-        // Đọc nhãn từ assets (labels.txt)
+        // Load danh sách nhãn từ tệp labels.txt trong assets
         labels = new ArrayList<>();
         try {
             InputStream is = getAssets().open("labels.txt");
@@ -59,22 +62,28 @@ public class TensorFlowActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        // Tải mô hình TFLite từ assets
+        // Load mô hình TFLite từ assets
         try {
-            MappedByteBuffer tfliteModel = loadModelFile("oil_model.tflite");
-            MappedByteBuffer tfliteModel1 = loadModelFile("");
+            MappedByteBuffer tfliteModel = loadModelFile("pollution_detection.tflite");
             interpreter = new Interpreter(tfliteModel);
         } catch (IOException e) {
             e.printStackTrace();
             return;
         }
 
-        // Kiểm tra xem có ảnh hoặc video được truyền vào không
+        // Ưu tiên xử lý Bitmap được truyền trực tiếp (nếu có)
+        if (sharedBitmap != null) {
+            processBitmap(sharedBitmap);
+            sharedBitmap = null;
+            return;
+        }
+
+        // Nhận dữ liệu từ Intent nếu có
         String imageUriString = getIntent().getStringExtra("imageUri");
         String videoUriString = getIntent().getStringExtra("videoUri");
 
+        // Nếu truyền ảnh
         if (imageUriString != null) {
-            // Xử lý ảnh đầu vào
             Uri imageUri = Uri.parse(imageUriString);
             try {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
@@ -82,21 +91,16 @@ public class TensorFlowActivity extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else if (videoUriString != null) {
-            // Xử lý video: lấy khung hình đầu tiên để phát hiện
+        }
+        // Nếu truyền video, lấy 1 khung hình đầu để phát hiện
+        else if (videoUriString != null) {
             Uri videoUri = Uri.parse(videoUriString);
             MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            boolean isProcessed = false;
             try {
                 retriever.setDataSource(this, videoUri);
-                Bitmap frame = retriever.getFrameAtTime(1000000); // lấy tại 1 giây
-                if (frame == null) {
-                    frame = retriever.getFrameAtTime(0); // fallback nếu không lấy được ở 1s
-                }
-                if (frame != null) {
-                    processBitmap(frame); // hàm xử lý bitmap với model TFLite
-                    isProcessed = true;
-                }
+                Bitmap frame = retriever.getFrameAtTime(1000000); // Lấy tại 1s
+                if (frame == null) frame = retriever.getFrameAtTime(0); // fallback nếu lỗi
+                if (frame != null) processBitmap(frame);
             } catch (RuntimeException e) {
                 e.printStackTrace();
                 Toast.makeText(this, "Lỗi khi xử lý video", Toast.LENGTH_SHORT).show();
@@ -104,53 +108,49 @@ public class TensorFlowActivity extends AppCompatActivity {
                 try {
                     retriever.release();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    throw new RuntimeException(e);
                 }
-            }
-            if (isProcessed) {
-                Toast.makeText(this, "Video đã được xử lý", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    // Chuyển bitmap đầu vào qua mô hình và hiển thị kết quả
+    // Xử lý nhận diện trên 1 Bitmap bất kỳ
     private void processBitmap(Bitmap bitmap) {
         int inputSize = 640;
-        // Resize ảnh về kích thước 640x640 (theo chuẩn đầu vào YOLOv8)
         Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, inputSize, inputSize, false);
 
-        // Tạo ByteBuffer cho mô hình (batch=1, 3 kênh RGB, float32)
+        // Chuẩn bị dữ liệu đầu vào dạng ByteBuffer
         ByteBuffer inputBuffer = ByteBuffer.allocateDirect(1 * inputSize * inputSize * 3 * 4);
         inputBuffer.order(ByteOrder.nativeOrder());
         inputBuffer.rewind();
+
         for (int y = 0; y < inputSize; y++) {
             for (int x = 0; x < inputSize; x++) {
                 int pixel = resizedBitmap.getPixel(x, y);
-                float r = ((pixel >> 16) & 0xFF) / 255.0f;
-                float g = ((pixel >> 8) & 0xFF) / 255.0f;
-                float b = (pixel & 0xFF) / 255.0f;
-                inputBuffer.putFloat(r);
-                inputBuffer.putFloat(g);
-                inputBuffer.putFloat(b);
+                inputBuffer.putFloat(((pixel >> 16) & 0xFF) / 255.0f);
+                inputBuffer.putFloat(((pixel >> 8) & 0xFF) / 255.0f);
+                inputBuffer.putFloat((pixel & 0xFF) / 255.0f);
             }
         }
 
-        // Lấy kích thước đầu ra của mô hình: [1, classes+5, num_predictions]
+        // Chuẩn bị bộ đệm cho đầu ra của mô hình
         int[] outputShape = interpreter.getOutputTensor(0).shape();
-        int outputDim = outputShape[1];
-        int outputBox = outputShape[2];
+        int outputBox = outputShape[1];
+        int outputDim = outputShape[2];
 
-        // Chạy suy luận
         ByteBuffer outputBuffer = ByteBuffer.allocateDirect(outputDim * outputBox * 4);
         outputBuffer.order(ByteOrder.nativeOrder());
         outputBuffer.rewind();
+
         Object[] inputArray = {inputBuffer};
         Map<Integer, Object> outputMap = new HashMap<>();
         outputMap.put(0, outputBuffer);
+
+        // Chạy suy luận mô hình
         interpreter.runForMultipleInputsOutputs(inputArray, outputMap);
         outputBuffer.rewind();
 
-        // Đọc kết quả
+        // Đọc kết quả đầu ra
         float[][][] outputs = new float[1][outputBox][outputDim];
         for (int i = 0; i < outputBox; i++) {
             for (int j = 0; j < outputDim; j++) {
@@ -158,13 +158,14 @@ public class TensorFlowActivity extends AppCompatActivity {
             }
         }
 
-        // Giải mã các bounding box và nhãn
         List<DetectionResult> detections = new ArrayList<>();
         float confThreshold = 0.3f;
+
+        // Lọc các box có độ tin cậy cao
         for (int i = 0; i < outputBox; i++) {
             float confidence = outputs[0][i][4];
             if (confidence < confThreshold) continue;
-            // Tìm nhãn có xác suất cao nhất
+
             int detectedClass = -1;
             float maxClassProb = 0;
             for (int c = 0; c < labels.size(); c++) {
@@ -174,51 +175,64 @@ public class TensorFlowActivity extends AppCompatActivity {
                     detectedClass = c;
                 }
             }
+
             float finalProb = maxClassProb * confidence;
             if (finalProb < confThreshold) continue;
 
-            // Tọa độ đã được scale theo inputSize
             float xCenter = outputs[0][i][0] * inputSize;
             float yCenter = outputs[0][i][1] * inputSize;
             float width = outputs[0][i][2] * inputSize;
             float height = outputs[0][i][3] * inputSize;
+
             float left = Math.max(0, xCenter - width / 2);
             float top = Math.max(0, yCenter - height / 2);
             float right = Math.min(inputSize - 1, xCenter + width / 2);
             float bottom = Math.min(inputSize - 1, yCenter + height / 2);
+
             RectF rect = new RectF(left, top, right, bottom);
             detections.add(new DetectionResult(rect, labels.get(detectedClass), finalProb, detectedClass));
         }
 
-        // Áp dụng Non-Max Suppression để loại khung thừa
+        // Áp dụng NMS để loại trùng box
         List<DetectionResult> finalDetections = Utils.nonMaxSuppress(detections, 0.5f);
 
-        // Paint bounding box and labels on the resized bitmap
-        Bitmap outputBitmap = resizedBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Bitmap outputBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
         Canvas canvas = new Canvas(outputBitmap);
+
         Paint paint = new Paint();
         paint.setColor(Color.RED);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(2.0f);
+
         Paint textPaint = new Paint();
         textPaint.setColor(Color.RED);
         textPaint.setTextSize(30);
 
+        // Tính tỷ lệ scale từ hệ quy chiếu mô hình về ảnh gốc
+        float scaleX = (float) bitmap.getWidth() / inputSize;
+        float scaleY = (float) bitmap.getHeight() / inputSize;
+
         StringBuilder sb = new StringBuilder();
+
         for (DetectionResult det : finalDetections) {
+            det.scaleBoundingBox(scaleX, scaleY);
             canvas.drawRect(det.getBoundingBox(), paint);
+
             float x = det.getBoundingBox().left;
             float y = det.getBoundingBox().top - 10;
             if (y < 0) y = det.getBoundingBox().top + 30;
+
             canvas.drawText(det.getLabel() + String.format(" (%.2f)", det.getConfidence()), x, y, textPaint);
             sb.append(det.getLabel()).append(String.format(" (%.2f) ", det.getConfidence()));
         }
+
+        // Hiển thị kết quả lên giao diện
         String resultText = sb.length() > 0 ? sb.toString() : "Không phát hiện đối tượng";
         resultLabel.setText(resultText);
         resultImage.setImageBitmap(outputBitmap);
     }
 
-    // Get model TFLite from assets
+    // Hàm load file mô hình từ assets
     private MappedByteBuffer loadModelFile(String modelFileName) throws IOException {
         AssetFileDescriptor fileDescriptor = getAssets().openFd(modelFileName);
         FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());

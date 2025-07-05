@@ -31,7 +31,13 @@ public class DetectionResult {
     public int getClassIndex() {
         return classIndex;
     }
+    // Hàm scale bounding box về đúng kích thước gốc
+    public void scaleBoundingBox(float scaleX, float scaleY) {
+        boundingBox = new RectF(
+                boundingBox.left * scaleX,
+                boundingBox.top * scaleY,
+                boundingBox.right * scaleX,
+                boundingBox.bottom * scaleY
+        );
+    }
 }
-
-
-
