@@ -6,12 +6,12 @@
     android:layout_height="match_parent">
 
     <!-- Ảnh kết quả có vẽ khung -->
-    <androidx.camera.view.PreviewView
+    <ImageView
         android:id="@+id/resultImage"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:scaleType="fitCenter"/>
+        android:layout_height="600dp"
+        android:scaleType="fitCenter"
+        android:background="#DDDDDD" />
     <Button
         android:id="@+id/btnDetect"
         android:layout_width="match_parent"
@@ -47,7 +47,7 @@
         android:layout_height="wrap_content"
         android:text="Vàng dầu: 0"
         android:textSize="16sp"
-        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
         android:textStyle="bold"/>
 
 </LinearLayout>

@@ -37,8 +37,6 @@ import java.util.concurrent.ExecutionException;
 public class MainActivity extends AppCompatActivity {
     private PreviewView previewView;
     private Button btnCapture, btnSelect;
-    private ImageView imageResult;
-    private TextView textLabel;
     private ImageCapture imageCapture;
     private ProcessCameraProvider cameraProvider;
 
@@ -58,7 +56,8 @@ public class MainActivity extends AppCompatActivity {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+                    new String[]{Manifest.permission.CAMERA},
+                    REQUEST_CAMERA_PERMISSION);
         } else {
             startCamera();
         }
@@ -76,16 +75,17 @@ public class MainActivity extends AppCompatActivity {
                 // Hiển thị lựa chọn: Ảnh hoặc Video
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("Chọn")
-                        .setItems(new String[]{"Ảnh", "Video"}, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int which) {
-                                if (which == 0) {
-                                    pickImage();
-                                } else {
-                                    pickVideo();
-                                }
-                            }
-                        });
+                        .setItems(new String[]{"Ảnh", "Video"}, new
+                                DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int which) {
+                                        if (which == 0) {
+                                            pickImage();
+                                        } else {
+                                            pickVideo();
+                                        }
+                                    }
+                                });
                 builder.show();
             }
         });
@@ -147,7 +147,8 @@ public class MainActivity extends AppCompatActivity {
                 bindPreviewAndImageCapture();
             } catch (ExecutionException | InterruptedException e) {
                 Log.e("CameraX", "Lỗi khởi động camera: " + e.getMessage());
-                Toast.makeText(MainActivity.this, "Không thể khởi động camera", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Không thể khởi động camera",
+                        Toast.LENGTH_SHORT).show();
             }
         }, ContextCompat.getMainExecutor(this));
     }
@@ -188,4 +189,3 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 }
-
