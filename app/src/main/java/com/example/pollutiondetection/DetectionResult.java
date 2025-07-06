@@ -2,18 +2,16 @@ package com.example.pollutiondetection;
 
 import android.graphics.RectF;
 
-// Lưu thông tin kết quả phát hiện
 public class DetectionResult {
-    private RectF boundingBox;
-    private String label;
-    private float confidence;
-    private int classIndex;
 
-    public DetectionResult(RectF boundingBox, String label, float confidence, int classIndex) {
+    private final RectF boundingBox;
+    private final String label;
+    private final float confidence;
+
+    public DetectionResult(RectF boundingBox, String label, float confidence) {
         this.boundingBox = boundingBox;
         this.label = label;
         this.confidence = confidence;
-        this.classIndex = classIndex;
     }
 
     public RectF getBoundingBox() {
@@ -27,11 +25,4 @@ public class DetectionResult {
     public float getConfidence() {
         return confidence;
     }
-
-    public int getClassIndex() {
-        return classIndex;
-    }
 }
-
-
-

@@ -31,9 +31,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".image.ImageActivity"></activity>
-        <activity android:name=".video.VideoActivity"></activity>
-        <activity android:name=".TorchScriptActivity"></activity>
     </application>
 
 </manifest>
