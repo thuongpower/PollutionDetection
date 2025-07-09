@@ -1,7 +1,9 @@
 package com.example.pollutiondetection;
 
+import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -19,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.tensorflow.lite.Interpreter;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,7 +37,7 @@ import java.util.HashMap;
 
 public class TensorFlowActivity extends AppCompatActivity {
     private ImageView resultImage;
-    private TextView resultLabel;
+    private TextView resultText, textAlgae, textTrash, textOil;
     private Interpreter interpreter;
     private List<String> labels;
 
@@ -43,7 +46,10 @@ public class TensorFlowActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_result);
         resultImage = findViewById(R.id.resultImage);
-        resultLabel = findViewById(R.id.resultLabel);
+        resultText = findViewById(R.id.resultText);
+        textAlgae = findViewById(R.id.textAlgae);
+        textTrash = findViewById(R.id.textTrash);
+        textOil = findViewById(R.id.textOil);
 
         // Đọc nhãn từ assets (labels.txt)
         labels = new ArrayList<>();
@@ -58,59 +64,25 @@ public class TensorFlowActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        DetectionResult.setLabelList(labels);
         // Tải mô hình TFLite từ assets
         try {
-            MappedByteBuffer tfliteModel = loadModelFile("oil_model.tflite");
-            MappedByteBuffer tfliteModel1 = loadModelFile("");
+            MappedByteBuffer tfliteModel = loadModelFile("detection.tflite");
             interpreter = new Interpreter(tfliteModel);
         } catch (IOException e) {
             e.printStackTrace();
             return;
         }
-
-        // Kiểm tra xem có ảnh hoặc video được truyền vào không
-        String imageUriString = getIntent().getStringExtra("imageUri");
-        String videoUriString = getIntent().getStringExtra("videoUri");
-
-        if (imageUriString != null) {
-            // Xử lý ảnh đầu vào
-            Uri imageUri = Uri.parse(imageUriString);
-            try {
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
-                processBitmap(bitmap);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else if (videoUriString != null) {
-            // Xử lý video: lấy khung hình đầu tiên để phát hiện
-            Uri videoUri = Uri.parse(videoUriString);
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            boolean isProcessed = false;
-            try {
-                retriever.setDataSource(this, videoUri);
-                Bitmap frame = retriever.getFrameAtTime(1000000); // lấy tại 1 giây
-                if (frame == null) {
-                    frame = retriever.getFrameAtTime(0); // fallback nếu không lấy được ở 1s
-                }
-                if (frame != null) {
-                    processBitmap(frame); // hàm xử lý bitmap với model TFLite
-                    isProcessed = true;
-                }
-            } catch (RuntimeException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Lỗi khi xử lý video", Toast.LENGTH_SHORT).show();
-            } finally {
-                try {
-                    retriever.release();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (isProcessed) {
-                Toast.makeText(this, "Video đã được xử lý", Toast.LENGTH_SHORT).show();
-            }
+        // Nhận dữ liệu từ ImageActivity hoặc VideoActivity
+        byte[] byteArray = getIntent().getByteArrayExtra("frameData");
+        if (byteArray != null) {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+            processBitmap(bitmap);
+        }else {
+            Toast.makeText(this, "Không có dữ liệu ảnh", Toast.LENGTH_SHORT).show();
+            finish();
         }
+
     }
 
     // Chuyển bitmap đầu vào qua mô hình và hiển thị kết quả
@@ -137,62 +109,73 @@ public class TensorFlowActivity extends AppCompatActivity {
 
         // Lấy kích thước đầu ra của mô hình: [1, classes+5, num_predictions]
         int[] outputShape = interpreter.getOutputTensor(0).shape();
-        int outputDim = outputShape[1];
         int outputBox = outputShape[2];
+        int outputDim = outputShape[1];
+
 
         // Chạy suy luận
-        ByteBuffer outputBuffer = ByteBuffer.allocateDirect(outputDim * outputBox * 4);
+        ByteBuffer outputBuffer = ByteBuffer.allocateDirect(outputBox * outputDim * 4);
         outputBuffer.order(ByteOrder.nativeOrder());
         outputBuffer.rewind();
+
         Object[] inputArray = {inputBuffer};
         Map<Integer, Object> outputMap = new HashMap<>();
         outputMap.put(0, outputBuffer);
+
         interpreter.runForMultipleInputsOutputs(inputArray, outputMap);
         outputBuffer.rewind();
 
-        // Đọc kết quả
-        float[][][] outputs = new float[1][outputBox][outputDim];
-        for (int i = 0; i < outputBox; i++) {
-            for (int j = 0; j < outputDim; j++) {
-                outputs[0][i][j] = outputBuffer.getFloat();
+        // Đọc kết quả từ outputBuffer
+        float[] outputArray = new float[outputBox * outputDim];
+        outputBuffer.asFloatBuffer().get(outputArray);
+
+        float[][][] outputs = new float[1][outputDim][outputBox];
+        for (int i = 0; i < outputDim; i++) {
+            for (int j = 0; j < outputBox; j++) {
+                outputs[0][i][j] = outputArray[i * outputBox + j];
             }
         }
 
         // Giải mã các bounding box và nhãn
         List<DetectionResult> detections = new ArrayList<>();
-        float confThreshold = 0.3f;
+        float confThreshold = 0.25f;
         for (int i = 0; i < outputBox; i++) {
-            float confidence = outputs[0][i][4];
+            float confidence = outputs[0][4][i]; // objectness
+
             if (confidence < confThreshold) continue;
+
             // Tìm nhãn có xác suất cao nhất
             int detectedClass = -1;
             float maxClassProb = 0;
             for (int c = 0; c < labels.size(); c++) {
-                float classProb = outputs[0][i][5 + c];
+                float classProb = outputs[0][5 + c][i];
                 if (classProb > maxClassProb) {
                     maxClassProb = classProb;
                     detectedClass = c;
                 }
             }
+
             float finalProb = maxClassProb * confidence;
             if (finalProb < confThreshold) continue;
 
-            // Tọa độ đã được scale theo inputSize
-            float xCenter = outputs[0][i][0] * inputSize;
-            float yCenter = outputs[0][i][1] * inputSize;
-            float width = outputs[0][i][2] * inputSize;
-            float height = outputs[0][i][3] * inputSize;
+            float xCenter = outputs[0][0][i] * inputSize;
+            float yCenter = outputs[0][1][i] * inputSize;
+            float width = outputs[0][2][i] * inputSize;
+            float height = outputs[0][3][i] * inputSize;
             float left = Math.max(0, xCenter - width / 2);
             float top = Math.max(0, yCenter - height / 2);
             float right = Math.min(inputSize - 1, xCenter + width / 2);
             float bottom = Math.min(inputSize - 1, yCenter + height / 2);
             RectF rect = new RectF(left, top, right, bottom);
-            detections.add(new DetectionResult(rect, labels.get(detectedClass), finalProb, detectedClass));
+            detections.add(new DetectionResult(rect, finalProb, detectedClass));
         }
 
         // Áp dụng Non-Max Suppression để loại khung thừa
-        List<DetectionResult> finalDetections = Utils.nonMaxSuppress(detections, 0.5f);
-
+        List<DetectionResult> finalDetections = Utils.nonMaxSuppress(detections, 0.7f);
+        int maxDet = 300; // từ max_det
+        if (finalDetections.size() > maxDet) {
+            finalDetections = finalDetections.subList(0, maxDet);
+        }
         // Paint bounding box and labels on the resized bitmap
         Bitmap outputBitmap = resizedBitmap.copy(Bitmap.Config.ARGB_8888, true);
         Canvas canvas = new Canvas(outputBitmap);
@@ -204,6 +187,7 @@ public class TensorFlowActivity extends AppCompatActivity {
         textPaint.setColor(Color.RED);
         textPaint.setTextSize(30);
 
+        int algaeCount = 0, trashCount = 0, oilCount = 0;
         StringBuilder sb = new StringBuilder();
         for (DetectionResult det : finalDetections) {
             canvas.drawRect(det.getBoundingBox(), paint);
@@ -212,10 +196,38 @@ public class TensorFlowActivity extends AppCompatActivity {
             if (y < 0) y = det.getBoundingBox().top + 30;
             canvas.drawText(det.getLabel() + String.format(" (%.2f)", det.getConfidence()), x, y, textPaint);
             sb.append(det.getLabel()).append(String.format(" (%.2f) ", det.getConfidence()));
+
+            String label = det.getLabel().toLowerCase(); 
+            if (label.equals("song")) {
+                algaeCount++;
+            } else if (label.equals("rac")) {
+                trashCount++;
+            } else if (label.equals("vang dau")) {
+                oilCount++;
+            }
         }
-        String resultText = sb.length() > 0 ? sb.toString() : "Không phát hiện đối tượng";
-        resultLabel.setText(resultText);
+
+        // Hiển thị kết quả
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        outputBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+        byte[] resultBytes = stream.toByteArray();
+
+        resultText.setText(sb.length() > 0 ? sb.toString().trim() : "Không phát hiện đối tượng");
         resultImage.setImageBitmap(outputBitmap);
+        textAlgae.setText("Sóng: " + algaeCount);
+        textTrash.setText("Rác: " + trashCount);
+        textOil.setText("Váng dầu: " + oilCount);
+
+        Toast.makeText(this, "Đã hoàn thành nhận diện", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, String.format("Sóng: %d, Rác: %d, Váng dầu: %d", algaeCount, trashCount, oilCount), Toast.LENGTH_SHORT).show();
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("resultImage", resultBytes);
+        resultIntent.putExtra("countAlgae", algaeCount);
+        resultIntent.putExtra("countTrash", trashCount);
+        resultIntent.putExtra("countOil", oilCount);
+        setResult(RESULT_OK, resultIntent);
+
+        finish();
     }
 
     // Get model TFLite from assets
